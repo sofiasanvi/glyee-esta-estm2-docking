@@ -1,0 +1,9 @@
+name: protein_prep
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.10
+  - pdb2pqr
+  - openbabel

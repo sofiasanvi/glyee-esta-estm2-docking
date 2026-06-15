@@ -16,4 +16,29 @@ obabel data/raw/GlyEE.sdf \
   --minimize \
   --ff MMFF94
 
-  
+
+3. Clean structures
+grep -v "^ANISOU" data/raw/EstA.pdb | grep -v " HOH " > data/prepared/EstA_clean.pdb
+grep -v "^ANISOU" data/raw/EstM2.pdb | grep -v " HOH " > data/prepared/EstM2_clean.pdb
+
+
+#Preperation pH = 7.0
+4. 
+conda env create --file environments/protein_prep.yml
+conda activate protein_prep
+
+5. 
+pdb2pqr --ff=AMBER --with-ph=7.0 --keep-chain \
+  data/prepared/EstA_clean.pdb data/prepared/EstA_pH7.pqr
+
+pdb2pqr --ff=AMBER --with-ph=7.0 --keep-chain \
+  data/prepared/EstM2_clean.pdb data/prepared/EstM2_pH7.pqr
+
+6.
+obabel data/prepared/EstA_pH7.pqr -O data/prepared/EstA_pH7.pdb
+obabel data/prepared/EstM2_pH7.pqr -O data/prepared/EstM2_pH7.pdb
+
+7.
+Open PyMoL
+- load EstA
+- select site, resi 59+D323+H322+A221+A325
