@@ -216,3 +216,25 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+#Project-specific ignores
+data/raw/
+data/prepared/
+results/
+logs/
+figures/
+
+*.pdb
+*.pdbqt
+*.sdf
+*.mol2
+*.dcd
+*.xtc
+*.trr
+*.gro
+*.tpr
+*.log
+
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
