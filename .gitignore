@@ -219,10 +219,7 @@ __marimo__/
 
 #Project-specific ignores
 
-data/prepared/
-results/
-logs/
-figures/
+
 
 
 *.dcd
@@ -230,7 +227,6 @@ figures/
 *.trr
 *.gro
 *.tpr
-*.log
 
 __pycache__/
 .ipynb_checkpoints/
