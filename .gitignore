@@ -218,16 +218,13 @@ __marimo__/
 .streamlit/secrets.toml
 
 #Project-specific ignores
-data/raw/
+
 data/prepared/
 results/
 logs/
 figures/
 
-*.pdb
-*.pdbqt
-*.sdf
-*.mol2
+
 *.dcd
 *.xtc
 *.trr
