@@ -231,3 +231,4 @@ __marimo__/
 __pycache__/
 .ipynb_checkpoints/
 .DS_Store
+results/movie 1.mp4

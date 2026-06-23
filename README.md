@@ -49,6 +49,15 @@ obabel data/raw/GlyEE.sdf \
   --minimize \
   --ff MMFF94
 ```
+Convert to PDBQT:
+
+```
+conda activate mko_obbl
+```
+```
+mk_prepare_ligand.py -i ligand.sdf -o ligand.pdbqt
+```
+
 
 ## 3. Clean protein structures
 
@@ -85,6 +94,19 @@ obabel data/prepared/EstA_pH7.pqr -O data/prepared/EstA_pH7.pdb
 obabel data/prepared/EstM2_pH7.pqr -O data/prepared/EstM2_pH7.pdb
 ```
 
+ ````bash
+conda activate mgltools
+
+prepare_receptor4.py \
+  -r prepared/EstA_pH7.pdb \
+  -o prepared/EstA.pdbqt \
+  -U waters
+
+prepare_receptor4.py \
+  -r prepared/EstM2_pH7.pdb \
+  -o prepared/EstM2.pdbqt \
+  -U waters
+`````
 ## 5. Identify docking box centers in PyMOL
 
 Open PyMOL and load the prepared protein structure:
