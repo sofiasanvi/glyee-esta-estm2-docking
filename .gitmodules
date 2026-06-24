@@ -1,0 +1,3 @@
+[submodule "external/PLACER"]
+	path = external/PLACER
+	url = https://github.com/baker-laboratory/PLACER.git
