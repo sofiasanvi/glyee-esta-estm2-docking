@@ -259,3 +259,333 @@ All paths should point to executables inside the Conda environment, for example:
 ```
 
 ---
+# Preparing GlyEE Docking Pose 5 for Amber
+
+This document describes how docking pose 5 of GlyEE was extracted from the
+AutoDock/Vina PDBQT output and converted into Amber-compatible ligand files.
+
+## Input files
+
+The workflow started from:
+
+```text
+results/EstA_GlyEE_seed1.pdbqt
+```
+
+This PDBQT file contains multiple docked GlyEE poses. Pose 5 was selected for
+the molecular dynamics system.
+
+The protein structure used later in the workflow is:
+
+```text
+EstA_pH7.pdb
+```
+
+## Output files
+
+The main Amber-compatible ligand files are:
+
+```text
+GYE_gaff2.mol2
+GYE_gaff2.frcmod
+```
+
+Additional files retained for reproducibility include:
+
+```text
+GlyEE_all_poses.sdf
+GYE_pose5.sdf
+sqm.in
+sqm.out
+sqm.pdb
+```
+
+## 1. Activate the Amber environment
+
+```bash
+conda activate AmberTools26
+source "$CONDA_PREFIX/amber.sh"
+```
+
+Check that the required programs are available:
+
+```bash
+for program in mk_export.py python antechamber parmchk2; do
+    printf "%-15s " "$program"
+    command -v "$program" || echo "MISSING"
+done
+```
+
+## 2. Create the ligand preparation directory
+
+From the project root:
+
+```bash
+cd ~/glyee-esta-estm2-docking
+
+mkdir -p amber_md/01_ligand
+cd amber_md/01_ligand
+```
+
+## 3. Export the docking poses from PDBQT to SDF
+
+Meeko was used to convert the PDBQT docking output into an SDF file containing
+all poses:
+
+```bash
+mk_export.py \
+  ../../results/EstA_GlyEE_seed1.pdbqt \
+  -s GlyEE_all_poses.sdf
+```
+
+Check that the output file was created:
+
+```bash
+ls -lh GlyEE_all_poses.sdf
+```
+
+Count the number of molecules in the SDF file:
+
+```bash
+grep -c '^\$\$\$\$$' GlyEE_all_poses.sdf
+```
+
+This number should match the number of docking models in the PDBQT file:
+
+```bash
+grep -c '^MODEL' ../../results/EstA_GlyEE_seed1.pdbqt
+```
+
+## 4. Extract pose 5 with RDKit
+
+The fifth molecule in the SDF file corresponds to docking pose 5.
+
+```bash
+python - <<'PY'
+from pathlib import Path
+from rdkit import Chem
+from rdkit.Chem import rdMolDescriptors
+
+input_file = Path("GlyEE_all_poses.sdf")
+output_file = Path("GYE_pose5.sdf")
+
+supplier = Chem.SDMolSupplier(
+    str(input_file),
+    removeHs=False,
+    sanitize=True,
+)
+
+molecules = [mol for mol in supplier if mol is not None]
+
+print(f"Readable poses: {len(molecules)}")
+
+if len(molecules) < 5:
+    raise RuntimeError("The SDF file contains fewer than five readable poses.")
+
+pose5 = molecules[4]
+pose5.SetProp("_Name", "GYE_pose5")
+
+writer = Chem.SDWriter(str(output_file))
+writer.write(pose5)
+writer.close()
+
+print(f"Saved: {output_file}")
+print(f"Formula: {rdMolDescriptors.CalcMolFormula(pose5)}")
+print(f"Formal charge: {Chem.GetFormalCharge(pose5):+d}")
+print(f"Atoms: {pose5.GetNumAtoms()}")
+print(f"Heavy atoms: {pose5.GetNumHeavyAtoms()}")
+PY
+```
+
+For protonated glycine ethyl ester, the expected formal charge is:
+
+```text
++1
+```
+
+The expected molecular formula is approximately:
+
+```text
+C4H10NO2+
+```
+
+Check that the file was created:
+
+```bash
+ls -lh GYE_pose5.sdf
+```
+
+## 5. Optional visual inspection
+
+Pose 5 can be inspected together with the EstA structure in PyMOL:
+
+```bash
+pymol ../../EstA_pH7.pdb GYE_pose5.sdf
+```
+
+The ligand should remain in the same docked position in the active site.
+
+PyMOL was used only for visual inspection. The ligand was not parameterized
+from a PyMOL-generated MOL2 file because such files may contain generic Tripos
+atom types and incomplete chemical information.
+
+## 6. Generate GAFF2 atom types and AM1-BCC charges
+
+The ligand was parameterized with Antechamber using:
+
+- GAFF2 atom types
+- AM1-BCC partial charges
+- total molecular charge `+1`
+- residue name `GYE`
+
+```bash
+antechamber \
+  -i GYE_pose5.sdf \
+  -fi sdf \
+  -o GYE_gaff2.mol2 \
+  -fo mol2 \
+  -at gaff2 \
+  -c bcc \
+  -nc 1 \
+  -rn GYE \
+  -s 2
+```
+
+The main output from this step is:
+
+```text
+GYE_gaff2.mol2
+```
+
+This file contains:
+
+- the three-dimensional pose 5 coordinates
+- GAFF2 atom types
+- AM1-BCC partial charges
+- atom names
+- bonds and bond orders
+- residue name `GYE`
+
+## 7. Verify the Antechamber calculation
+
+Check that the SQM calculation completed successfully:
+
+```bash
+grep "Calculation Completed" sqm.out
+```
+
+Also inspect the end of the output:
+
+```bash
+tail -20 sqm.out
+```
+
+Check that the Amber MOL2 file is non-empty:
+
+```bash
+ls -lh GYE_gaff2.mol2
+```
+
+Verify that the partial charges sum to approximately `+1`:
+
+```bash
+awk '
+/@<TRIPOS>ATOM/ {
+    atoms = 1
+    next
+}
+/@<TRIPOS>BOND/ {
+    atoms = 0
+}
+atoms && NF >= 9 {
+    charge += $9
+}
+END {
+    printf "MOL2 net charge: %.6f\n", charge
+}
+' GYE_gaff2.mol2
+```
+
+Expected result:
+
+```text
+MOL2 net charge: 1.000000
+```
+
+## 8. Generate the Amber force-field parameter file
+
+`parmchk2` was run on the GAFF2-typed MOL2 file:
+
+```bash
+parmchk2 \
+  -i GYE_gaff2.mol2 \
+  -f mol2 \
+  -o GYE_gaff2.frcmod \
+  -s 2
+```
+
+The resulting file is:
+
+```text
+GYE_gaff2.frcmod
+```
+
+This file contains any additional bond, angle, torsion, improper, or
+non-bonded parameters required for GlyEE that are not already covered directly
+by the standard GAFF2 parameter set.
+
+Check that the file exists and is non-empty:
+
+```bash
+ls -lh GYE_gaff2.frcmod
+```
+
+Search for parameters that may require manual review:
+
+```bash
+grep -iE "ATTN|needs revision|missing|zero" \
+  GYE_gaff2.frcmod || true
+```
+
+## 9. Final ligand files for tleap
+
+The two files needed to load GlyEE into `tleap` are:
+
+```text
+GYE_gaff2.mol2
+GYE_gaff2.frcmod
+```
+
+They can later be loaded with:
+
+```text
+source leaprc.gaff2
+
+loadamberparams GYE_gaff2.frcmod
+glyee = loadmol2 GYE_gaff2.mol2
+```
+
+The next stage is to combine the prepared GlyEE ligand with `EstA_pH7.pdb`,
+add water and ions, and generate the Amber topology and coordinate files:
+
+```text
+EstA_GlyEE.prmtop
+EstA_GlyEE.inpcrd
+```
+
+## 10. Files to keep
+
+For reproducibility, keep at least:
+
+```text
+results/EstA_GlyEE_seed1.pdbqt
+GlyEE_all_poses.sdf
+GYE_pose5.sdf
+GYE_gaff2.mol2
+GYE_gaff2.frcmod
+sqm.out
+environment-amber.yml
+```
+
+The temporary files beginning with `ANTECHAMBER_` are useful for debugging but
+are not required for the later `tleap` step.
