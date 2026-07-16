@@ -213,3 +213,49 @@ logs/EstM2_GlyEE_seed1.log
 - This is below the commonly recommended upper limit of approximately `4 nm`.
 - `exhaustiveness 32` is used to increase the docking search effort.
 - The seed is fixed to `1` to make the docking runs more reproducible.
+
+
+#amber
+Activate the environment:
+
+```bash
+conda activate AmberTools26
+source "$CONDA_PREFIX/amber.sh"
+```
+
+`source "$CONDA_PREFIX/amber.sh"` sets the `AMBERHOME` environment variable, among others.
+
+---
+
+## 3. Verify the installation
+
+```bash
+echo "CONDA_PREFIX=$CONDA_PREFIX"
+echo "AMBERHOME=$AMBERHOME"
+```
+
+Check the Amber tools:
+
+```bash
+for program in tleap sander cpptraj antechamber parmchk2 pdb4amber; do
+    printf "%-15s " "$program"
+    command -v "$program" || echo "MISSING"
+done
+```
+
+Also check the tools used for docking files:
+
+```bash
+for program in mk_export.py obabel; do
+    printf "%-15s " "$program"
+    command -v "$program" || echo "MISSING"
+done
+```
+
+All paths should point to executables inside the Conda environment, for example:
+
+```text
+/home/sofia/miniconda3/envs/AmberTools26/bin/tleap
+```
+
+---

@@ -1,0 +1,17 @@
+name: AmberTools26
+
+channels:
+  - conda-forge
+  - nodefaults
+
+dependencies:
+  - python=3.12
+  - dacase::ambertools-dac=26
+  - openbabel
+  - netcdf4
+  - pip
+
+  # Install pip packages last so they do not interfere with Conda's solver.
+  - pip:
+      - meeko==0.7.1
+      - rdkit==2026.3.3
